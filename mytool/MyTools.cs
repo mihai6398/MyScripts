@@ -2,15 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace MyToolsUnity
 {
     public class MyTools : MonoBehaviour
     {
-
-        // Constructor care primește un MonoBehaviour pentru a rula corutine
-
-
         // Funcție pentru un timer global
         public void GlobalTimer(float time, System.Action onTimerComplete)
         {
@@ -23,10 +20,6 @@ namespace MyToolsUnity
             // Așteaptă timpul specificat
             yield return new WaitForSeconds(time);
 
-            // Adaugă codul pe care dorești să îl rulezi când timer-ul este complet
-            // Exemplu: Debug.Log("Timer complet!");
-              
-            // Apelăm acțiunea (callback) pentru a notifica că timer-ul s-a încheiat
             onTimerComplete?.Invoke();
         }
         
@@ -106,16 +99,63 @@ namespace MyToolsUnity
             return percentages;
         }
         
-        public static bool InvokeIfNotNull<T>(T obj)
-        {
-            return obj != null;
-        }
+
 
         public int GenerateRandomNumber(int min, int max)
         {
             return UnityEngine.Random.Range(min, max + 1);
         }
-        
+        //Global Debager
+        //MyTools myTools = GetComponent<MyTools>(); // Asigurați-vă că există o instanță MyTools pe un GameObject
+        //myTools.MonitorVariable(() => PlayerData.MissionComplite, (newValue) =>
+        //{
+        //    Debug.Log($"MissionComplite changed to {newValue}");
+        //});
 
+        public void MonitorCurrentSelectedUI(Action<GameObject> onSelectionChange)
+        {
+            StartCoroutine(MonitorCurrentSelectedUICoroutine(onSelectionChange));
+        }
+        
+        private IEnumerator MonitorCurrentSelectedUICoroutine(Action<GameObject> onSelectionChange)
+        {
+            GameObject lastSelectedObject = null;
+            while (true)
+            {
+                yield return new WaitForSeconds(0.1f); // Verifică schimbarea la fiecare 0.1 secunde
+
+                GameObject currentSelectedObject = EventSystem.current.currentSelectedGameObject;
+                if (currentSelectedObject != lastSelectedObject)
+                {
+                    onSelectionChange?.Invoke(currentSelectedObject);
+                    lastSelectedObject = currentSelectedObject;
+                }
+            }
+        }
+        
+        
+        public void MonitorVariable<T>(Func<T> valueProvider, Action<T> onChange)
+        {
+            StartCoroutine(MonitorVariableCoroutine(valueProvider, onChange));
+        }
+
+        private IEnumerator MonitorVariableCoroutine<T>(Func<T> valueProvider, Action<T> onChange)
+        {
+            if (valueProvider == null) yield break;
+
+            T lastValue = valueProvider();
+            while (true)
+            {
+                yield return new WaitForSeconds(0.5f); // Verifică schimbarea la fiecare 0.5 secunde
+                T currentValue = valueProvider();
+                if (!EqualityComparer<T>.Default.Equals(lastValue, currentValue))
+                {
+                    onChange?.Invoke(currentValue);
+                    lastValue = currentValue;
+                }
+            }
+        }
+        
+        
     }
 }
